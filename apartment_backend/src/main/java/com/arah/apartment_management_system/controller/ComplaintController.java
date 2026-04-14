@@ -20,7 +20,6 @@ public class ComplaintController {
 
     private final ComplaintService complaintService;
 
-
     @GetMapping("/api/admin/complaints")
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<List<ComplaintResponseDTO>> getAllComplaints() {
@@ -49,7 +48,6 @@ public class ComplaintController {
         complaintService.deleteComplaint(id);
         return ApiResponse.success("Complaint deleted", null);
     }
-
 
     @GetMapping("/api/user/complaints")
     @PreAuthorize("hasRole('RESIDENT')")

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axiosInstance from "../../utils/axiosConfig";
 import { toast } from "react-toastify";
 import "./AdminShared.css";
@@ -13,18 +14,15 @@ const getDocUrl = (url) => {
 };
 
 export default function ManageUsers() {
-  const [users, setUsers] = useState([]);
+  const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editUserId, setEditUserId] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
-  const [deactivatingId, setDeactivatingId] = useState(null);
   const [reactivateUserId, setReactivateUserId] = useState(null);
-  const [rejectingId, setRejectingId] = useState(null);
   const [flatIdToAllocate, setFlatIdToAllocate] = useState("");
   const [deactivateConfirmId, setDeactivateConfirmId] = useState(null);
   const [flatIdError, setFlatIdError] = useState("");
-  const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
   const [userData, setUserData] = useState({
     username: "",
@@ -35,67 +33,115 @@ export default function ManageUsers() {
     phoneNumber: "",
     apartmentId: ""
   });
-  const [availableFlats, setAvailableFlats] = useState([]);
-  const [apartments, setApartments] = useState([]);
   const [activeTab, setActiveTab] = useState("all"); // "all", "residents", "requests"
   const [searchQuery, setSearchQuery] = useState("");
-  const [currentUserRole, setCurrentUserRole] = useState("");
 
-  useEffect(() => {
-    const init = async () => {
-      try {
-        const profileRes = await axiosInstance.get("/admin/profile");
-        const role = profileRes.data?.data?.role;
-        setCurrentUserRole(role || "");
-        if (role === "ROLE_SUPER_ADMIN") {
-          await loadApartments();
-        }
-      } catch (err) {
-        console.error("Failed to fetch admin profile", err);
-      }
-      loadUsers();
-      loadFlats();
-    };
-    init();
-  }, []);
+  // Queries
+  const { data: profile } = useQuery({
+    queryKey: ["adminProfile"],
+    queryFn: async () => {
+      const res = await axiosInstance.get("/admin/profile");
+      return res.data?.data;
+    }
+  });
 
-  const loadApartments = async () => {
-    try {
+  const currentUserRole = profile?.role || "";
+
+  const { data: apartments = [] } = useQuery({
+    queryKey: ["apartments"],
+    queryFn: async () => {
       const res = await axiosInstance.get("/apartments");
-      let data = res.data;
-      if (data?.data) data = data.data;
-      if (data?.content) data = data.content;
-      setApartments(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error("Error loading apartments:", error);
-    }
-  };
+      const d = res.data.data || res.data;
+      return Array.isArray(d?.content) ? d.content : (Array.isArray(d) ? d : []);
+    },
+    enabled: currentUserRole === "ROLE_SUPER_ADMIN"
+  });
 
-  const loadFlats = async () => {
-    try {
+  const { data: flats = [] } = useQuery({
+    queryKey: ["flats"],
+    queryFn: async () => {
       const res = await axiosInstance.get("/flats");
-
-      let data = res.data;
-      if (data?.data) data = data.data;
-      if (data?.content) data = data.content;
-
-      const parsedFlats = Array.isArray(data) ? data : [];
-
-      const available = parsedFlats.filter(f => f.status === "AVAILABLE");
-      setAvailableFlats(available);
-    } catch (error) {
-      console.error("Error loading flats:", error);
-      setAvailableFlats([]);
+      const d = res.data.data || res.data;
+      return Array.isArray(d?.content) ? d.content : (Array.isArray(d) ? d : []);
     }
-  };
+  });
 
-  const loadUsers = async () => {
-    try {
+  const { data: users = [] } = useQuery({
+    queryKey: ["users"],
+    queryFn: async () => {
       const res = await axiosInstance.get("/admin/users");
-      const data = res.data.data;
-      setUsers(Array.isArray(data) ? data : []);
-    } catch { setUsers([]); }
-  };
+      return Array.isArray(res.data.data) ? res.data.data : [];
+    }
+  });
+
+  const availableFlats = flats.filter(f => f.status === "AVAILABLE");
+
+  // Mutations
+  const userMutation = useMutation({
+    mutationFn: async ({ isEditing, id, payload }) => {
+      if (isEditing) {
+        return axiosInstance.put(`/admin/users/${id}`, payload);
+      }
+      return axiosInstance.post("/admin/users", payload);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries(["users"]);
+      if (variables.isEditing) {
+        toast.success("User updated successfully!");
+      } else if (variables.payload.role === "ROLE_RESIDENT") {
+        toast.success("Resident created! Check 'Approve Requests' to allocate a flat.");
+      } else {
+        toast.success("User created successfully!");
+      }
+      resetForm();
+      if (selectedUser && selectedUser.id === editUserId) setSelectedUser(null);
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || "Operation failed");
+    }
+  });
+
+  const deactivateMutation = useMutation({
+    mutationFn: (userId) => axiosInstance.put(`/admin/users/${userId}/deactivate`),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["users"]);
+      setDeactivateConfirmId(null);
+      toast.success("User deactivated successfully!");
+    }
+  });
+
+  const reactivateMutation = useMutation({
+    mutationFn: async ({ userId, flatId, type }) => {
+      if (type === "approve") {
+        return axiosInstance.put(`/admin/users/${userId}/approve`, null, { params: { flatId } });
+      } else if (type === "allocate") {
+        return axiosInstance.put(`/admin/users/${userId}/allocate/${flatId}`);
+      } else {
+        return axiosInstance.put(`/admin/users/${userId}/reactivate`);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["users"]);
+      setReactivateUserId(null);
+      setFlatIdToAllocate("");
+      setActiveTab("all");
+      toast.success("User reactivated/approved successfully!");
+    },
+    onError: (error) => {
+      setFlatIdError(error.response?.data?.message || "Failed to approve/allocate.");
+    }
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: (userId) => axiosInstance.put(`/admin/users/${userId}/reject`),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["users"]);
+      toast.info("User request rejected.");
+    },
+    onError: () => {
+      toast.error("Failed to reject user.");
+    }
+  });
 
   const validateForm = () => {
     const newErrors = {};
@@ -135,53 +181,29 @@ export default function ManageUsers() {
     setEditUserId(null);
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     if (!validateForm()) return;
 
-    setSubmitting(true);
-    try {
-      const payload = { 
-        ...userData, 
-        contactNumber: userData.phoneNumber,
-        apartmentId: userData.apartmentId || null 
-      };
-      delete payload.confirmPassword;
-      delete payload.phoneNumber;
+    const payload = { 
+      ...userData, 
+      contactNumber: userData.phoneNumber,
+      apartmentId: userData.apartmentId || null 
+    };
+    delete payload.confirmPassword;
+    delete payload.phoneNumber;
 
-      if (isEditing) {
-        delete payload.password;
-        await axiosInstance.put(`/admin/users/${editUserId}`, payload);
-        toast.success("User updated successfully!");
-      } else {
-        await axiosInstance.post("/admin/users", payload);
-        if (userData.role === "ROLE_RESIDENT") {
-          toast.success("Resident created! Check 'Approve Requests' to allocate a flat.");
-        } else {
-          toast.success("User created successfully!");
-        }
-      }
-      resetForm();
-      loadUsers();
-      if (selectedUser && selectedUser.id === editUserId) setSelectedUser(null);
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Operation failed");
-    } finally {
-      setSubmitting(false);
-    }
+    if (isEditing) delete payload.password;
+
+    userMutation.mutate({ isEditing, id: editUserId, payload });
   };
 
   const handleDeactivate = (userId) => {
     setDeactivateConfirmId(userId);
   };
 
-  const confirmDeactivate = async (userId) => {
-    try {
-      setDeactivatingId(userId);
-      await axiosInstance.put(`/admin/users/${userId}/deactivate`);
-      await loadUsers();
-      setDeactivateConfirmId(null);
-    } finally { setDeactivatingId(null); }
+  const confirmDeactivate = (userId) => {
+    deactivateMutation.mutate(userId);
   };
 
   const cancelDeactivate = () => {
@@ -194,52 +216,22 @@ export default function ManageUsers() {
     setReactivateUserId(null);
   };
 
-  const reactivateNonResident = async (user) => {
-    try {
-      await axiosInstance.put(`/admin/users/${user.id}/reactivate`);
-      setReactivateUserId(null);
-      await loadUsers();
-      setActiveTab("all");
-      toast.success("User reactivated successfully!");
-    } catch (error) {
-      console.error("Reactivate error:", error);
-      toast.error(error.response?.data?.message || "Failed to reactivate user.");
-    }
+  const reactivateNonResident = (user) => {
+    reactivateMutation.mutate({ userId: user.id, type: "reactivate" });
   };
 
-  const submitReactivate = async (user) => {
+  const submitReactivate = (user) => {
     if (!flatIdToAllocate) {
       setFlatIdError("Please select a Flat.");
       return;
     }
     setFlatIdError("");
-    try {
-      if (user.status === "PENDING") {
-        await axiosInstance.put(`/admin/users/${user.id}/approve`, null, { params: { flatId: flatIdToAllocate } });
-      } else {
-        await axiosInstance.put(`/admin/users/${user.id}/allocate/${flatIdToAllocate}`);
-      }
-      setReactivateUserId(null);
-      setFlatIdToAllocate("");
-      await loadUsers();
-      setActiveTab("all");
-    } catch (error) {
-      console.error("Error activating resident:", error);
-      setFlatIdError(error.response?.data?.message || "Failed to approve/allocate. Check backend console.");
-    }
+    const type = user.status === "PENDING" ? "approve" : "allocate";
+    reactivateMutation.mutate({ userId: user.id, flatId: flatIdToAllocate, type });
   };
 
-  const handleReject = async (userId) => {
-    try {
-      setRejectingId(userId);
-      await axiosInstance.put(`/admin/users/${userId}/reject`);
-      toast.info("User request rejected.");
-    } catch (error) {
-      toast.error("Failed to reject user.");
-    } finally {
-      setRejectingId(null);
-      loadUsers();
-    }
+  const handleReject = (userId) => {
+    rejectMutation.mutate(userId);
   };
 
   const handleEdit = (user) => {
@@ -417,8 +409,8 @@ export default function ManageUsers() {
                 <button type="button" className="inline-btn inline-btn-cancel" onClick={() => { resetForm(); setShowForm(false); }}>
                   Cancel
                 </button>
-                <button type="submit" className="inline-btn inline-btn-submit btn-gradient-blue" disabled={submitting}>
-                  {submitting ? (isEditing ? 'Updating...' : 'Creating...') : (isEditing ? '✏️ Update User' : '➕ Create User')}
+                <button type="submit" className="inline-btn inline-btn-submit btn-gradient-blue" disabled={userMutation.isPending}>
+                  {userMutation.isPending ? (isEditing ? 'Updating...' : 'Creating...') : (isEditing ? '✏️ Update User' : '➕ Create User')}
                 </button>
               </div>
             </form>
@@ -634,8 +626,8 @@ export default function ManageUsers() {
                           {deactivateConfirmId === u.id ? (
                             <div className="action-group" style={{ background: 'var(--danger-bg)', padding: '16px', borderRadius: 'var(--r-md)', border: '1px solid #FECACA' }}>
                               <span style={{ marginRight: '12px', color: '#991B1B', fontWeight: '500', fontSize: '14px' }}>Are you sure you want to deactivate?</span>
-                              <button className="btn btn-danger" onClick={() => confirmDeactivate(u.id)} disabled={deactivatingId === u.id}>
-                                {deactivatingId === u.id ? "Deactivating..." : "Confirm Deactivation"}
+                              <button className="btn btn-danger" onClick={() => confirmDeactivate(u.id)} disabled={deactivateMutation.isPending}>
+                                {deactivateMutation.isPending ? "Deactivating..." : "Confirm Deactivation"}
                               </button>
                               <button className="btn btn-secondary" onClick={cancelDeactivate}>Cancel</button>
                             </div>
@@ -679,8 +671,8 @@ export default function ManageUsers() {
                               {u.status === "PENDING" ? (
                                 <>
                                   <button className="btn btn-success" onClick={() => setReactivateUserId(u.id)}>Approve Request</button>
-                                  <button className="btn btn-danger" onClick={() => handleReject(u.id)} disabled={rejectingId === u.id}>
-                                    {rejectingId === u.id ? "Rejecting..." : "Reject Request"}
+                                  <button className="btn btn-danger" onClick={() => handleReject(u.id)} disabled={rejectMutation.isPending}>
+                                    {rejectMutation.isPending ? "Rejecting..." : "Reject Request"}
                                   </button>
                                 </>
                               ) : (

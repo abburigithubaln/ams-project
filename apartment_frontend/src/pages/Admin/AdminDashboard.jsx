@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import axiosInstance from "../../utils/axiosConfig";
 import "../../components/Admin/AdminShared.css";
 
@@ -14,6 +14,7 @@ import ManageVisitors from "../../components/Admin/ManageVisitors";
 import ManageMoveInOut from "../../components/Admin/ManageMoveInOut";
 import ManageParking from "../../components/Admin/ManageParking";
 import ManageFeedback from "../../components/Admin/ManageFeedback";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 // Fix Cloudinary URLs: PDFs uploaded as 'image' type need /raw/upload/ path to be viewable
 const getReceiptUrl = (url) => {
@@ -42,19 +43,19 @@ const BuildingIcon = () => <I d={<><rect x="4" y="2" width="16" height="20" rx="
 const FileTextIcon = () => <I d={<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></>} />;
 const EyeIcon = () => <I d={<><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></>} />;
 const CpuIcon = () => <I d={<><rect x="4" y="4" width="16" height="16" rx="2" /><rect x="9" y="9" width="6" height="6" /><line x1="9" y1="1" x2="9" y2="4" /><line x1="15" y1="1" x2="15" y2="4" /><line x1="9" y1="20" x2="9" y2="23" /><line x1="15" y1="20" x2="15" y2="23" /><line x1="20" y1="9" x2="23" y2="9" /><line x1="20" y1="14" x2="23" y2="14" /><line x1="1" y1="9" x2="4" y2="9" /><line x1="1" y1="14" x2="4" y2="14" /></>} />;
-const BarChart2Icon = () => <I d={<><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></>} />;
+// BarChart2Icon removed as it is unused
 const HomeIcon = () => <I d={<><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></>} />;
 const ClubIcon = () => <I d={<><path d="M12 2a5 5 0 0 1 5 5c0 2-1 4-3 5h4a3 3 0 0 1 3 3v1H3v-1a3 3 0 0 1 3-3h4c-2-1-3-3-3-5a5 5 0 0 1 5-5z" /></>} />;
 const VoteIcon = () => <I d={<><path d="M3 6h18M3 12h18M3 18h18" /></>} />;
-const LogoutIcon = () => <I d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" size={16} />;
+// LogoutIcon removed as it is unused
 const CheckIcon = () => <I d="M20 6 9 17 4 12" size={16} />;
 const XIcon = () => <I d="M18 6 6 18M6 6l12 12" size={16} />;
 const ShieldIcon = () => <I d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />;
 const RupeeIcon = () => <I d={<><path d="M6 3h12" /><path d="M6 8h12" /><path d="m6 13 8.5 8" /><path d="M18 13c0-2.8-2.2-5-5-5s-5 2.2-5 5" /><path d="M8 13h10" /></>} />;
-const FlashIcon = () => <I d={<><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z" /></>} />;
+// FlashIcon removed as it is unused
 const PlusIcon = () => <I d={<><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></>} />;
 const ClockIcon = () => <I d={<><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></>} />;
-const PhoneIcon = () => <I d={<><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" /></>} />;
+// PhoneIcon removed as it is unused
 const DoorIcon = () => <I d={<><path d="M13 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3" /><path d="M11 21H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3" /><path d="M6 12h12" /></>} />;
 const CheckCircleIcon = () => <I d={<><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></>} />;
 
@@ -87,14 +88,107 @@ const ToastContainer = ({ toasts, removeToast }) => {
 };
 
 export default function AdminDashboard() {
+  const queryClient = useQueryClient();
   const [activeView, setActiveView] = useState("overview");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [flats, setFlats] = useState([]);
-  const [blocks, setBlocks] = useState([]);
-  const [apartments, setApartments] = useState([]);
-  const [adminProfile, setAdminProfile] = useState({ username: "", email: "", phone: "", role: "" });
+  
+  // Queries
+  const { data: adminProfile = { username: "", email: "", phone: "", role: "" }, isPending: isProfilePending } = useQuery({
+    queryKey: ["adminProfile"],
+    queryFn: async () => {
+      const response = await axiosInstance.get("/admin/profile");
+      return response.data.data;
+    }
+  });
+
+  const { data: flats = [] } = useQuery({
+    queryKey: ["flats"],
+    queryFn: async () => {
+      const res = await axiosInstance.get("/flats");
+      const d = res.data.data || res.data;
+      return Array.isArray(d?.content) ? d.content : (Array.isArray(d) ? d : []);
+    }
+  });
+
+  const { data: blocks = [] } = useQuery({
+    queryKey: ["blocks"],
+    queryFn: async () => {
+      const res = await axiosInstance.get("/blocks");
+      const d = res.data.data || res.data;
+      return Array.isArray(d?.content) ? d.content : (Array.isArray(d) ? d : []);
+    }
+  });
+
+  const { data: apartments = [] } = useQuery({
+    queryKey: ["apartments"],
+    queryFn: async () => {
+      const res = await axiosInstance.get("/apartments");
+      const d = res.data.data || res.data;
+      return Array.isArray(d?.content) ? d.content : (Array.isArray(d) ? d : []);
+    },
+    enabled: adminProfile.role === "ROLE_SUPER_ADMIN"
+  });
+
+  const { data: notices = [] } = useQuery({
+    queryKey: ["notices"],
+    queryFn: async () => {
+      const response = await axiosInstance.get("/admin/notices");
+      const data = response.data.data || response.data || [];
+      return Array.isArray(data) ? data : [];
+    }
+  });
+
+  const { data: staffData = { active: [], deactivated: [] } } = useQuery({
+    queryKey: ["staff"],
+    queryFn: async () => {
+      const [activeRes, deactiveRes] = await Promise.all([
+        axiosInstance.get("/admin/staff"),
+        axiosInstance.get("/admin/staff/deactivated")
+      ]);
+      return {
+        active: Array.isArray(activeRes.data.data || activeRes.data) ? (activeRes.data.data || activeRes.data) : [],
+        deactivated: Array.isArray(deactiveRes.data.data || deactiveRes.data) ? (deactiveRes.data.data || deactiveRes.data) : []
+      };
+    }
+  });
+
+  const staff = staffData.active;
+  const deactivatedStaff = staffData.deactivated;
+
+  const { data: visitors = [] } = useQuery({
+    queryKey: ["visitors"],
+    queryFn: async () => {
+      const response = await axiosInstance.get("/admin/visitors");
+      return Array.isArray(response.data.data) ? response.data.data : [];
+    }
+  });
+
+  const { data: vehicles = [] } = useQuery({
+    queryKey: ["vehicles"],
+    queryFn: async () => {
+      const response = await axiosInstance.get("/admin/vehicles");
+      return Array.isArray(response.data.data) ? response.data.data : [];
+    }
+  });
+
   const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [profileFormData, setProfileFormData] = useState({ username: "", email: "", phone: "" });
+  const [profileFormData, setProfileFormData] = useState({ 
+    username: adminProfile.username || "", 
+    email: adminProfile.email || "", 
+    phone: adminProfile.contactNumber || adminProfile.phone || "" 
+  });
+
+  // Sync profile form data when adminProfile is loaded
+  useEffect(() => {
+    if (adminProfile.username) {
+      setProfileFormData({
+        username: adminProfile.username,
+        email: adminProfile.email,
+        phone: adminProfile.contactNumber || adminProfile.phone || ""
+      });
+    }
+  }, [adminProfile]);
+
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordFormData, setPasswordFormData] = useState({
     currentPassword: "",
@@ -102,15 +196,12 @@ export default function AdminDashboard() {
     confirmPassword: ""
   });
   const [uploadingProfilePicture, setUploadingProfilePicture] = useState(false);
-  const [loading, setLoading] = useState(true);
+  // Old loading state removed as TanStack Query handles it
+  // const [loading, setLoading] = useState(false);
 
   // Toast notifications state
   const [toasts, setToasts] = useState([]);
 
-  // New state for notices and staff
-  const [notices, setNotices] = useState([]);
-  const [staff, setStaff] = useState([]);
-  const [deactivatedStaff, setDeactivatedStaff] = useState([]);
   const [staffTab, setStaffTab] = useState("active");
   const [showNoticeModal, setShowNoticeModal] = useState(false);
   const [showStaffModal, setShowStaffModal] = useState(false);
@@ -120,8 +211,6 @@ export default function AdminDashboard() {
   const [staffSort, setStaffSort] = useState("username");
   const [isEditingStaff, setIsEditingStaff] = useState(false);
   const [editStaffId, setEditStaffId] = useState(null);
-  const [visitors, setVisitors] = useState([]);
-  const [vehicles, setVehicles] = useState([]);
   const [noticeFile, setNoticeFile] = useState(null);
   const [uploadingNoticeFile, setUploadingNoticeFile] = useState(false);
   const [viewImage, setViewImage] = useState(null);
@@ -130,32 +219,12 @@ export default function AdminDashboard() {
   const [loadingResponses, setLoadingResponses] = useState(false);
   const [expandedNoticeId, setExpandedNoticeId] = useState(null);
 
-  // Loading states for forms
-  const [noticeLoading, setNoticeLoading] = useState(false);
-  const [staffLoading, setStaffLoading] = useState(false);
-
   // Form validation errors
   const [noticeErrors, setNoticeErrors] = useState({});
   const [staffErrors, setStaffErrors] = useState({});
 
   // Password visibility toggle
   const [showPassword, setShowPassword] = useState(false);
-
-
-
-  // Modal refs for click outside detection
-  const noticeModalRef = useRef(null);
-  const staffModalRef = useRef(null);
-
-  // Toast helper functions
-  const addToast = (type, title, message) => {
-    const id = Date.now();
-    setToasts(prev => [...prev, { id, type, title, message }]);
-  };
-
-  const removeToast = (id) => {
-    setToasts(prev => prev.filter(toast => toast.id !== id));
-  };
 
   // Form validation functions
   const validateNoticeForm = () => {
@@ -194,57 +263,26 @@ export default function AdminDashboard() {
     return Object.keys(errors).length === 0;
   };
 
-  // Close modal when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (showNoticeModal && noticeModalRef.current && !noticeModalRef.current.contains(event.target)) {
-        setShowNoticeModal(false);
-        setNoticeErrors({});
+  const loadNoticeResponses = async (noticeId) => {
+    if (expandedNoticeId === noticeId) {
+      setExpandedNoticeId(null);
+      return;
+    }
+
+    setExpandedNoticeId(noticeId);
+    if (!noticeResponses[noticeId]) {
+      setLoadingResponses(true);
+      try {
+        const res = await axiosInstance.get(`/admin/notices/${noticeId}/responses`);
+        const data = res.data.data || res.data || [];
+        setNoticeResponses(prev => ({ ...prev, [noticeId]: Array.isArray(data) ? data : [] }));
+      } catch (err) {
+        console.error("Failed to fetch notice responses", err);
+      } finally {
+        setLoadingResponses(false);
       }
-      if (showStaffModal && staffModalRef.current && !staffModalRef.current.contains(event.target)) {
-        setShowStaffModal(false);
-        setStaffErrors({});
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showNoticeModal, showStaffModal]);
-
-  useEffect(() => {
-    loadFlats();
-    loadBlocks();
-    loadLoginProfile();
-    loadNotices();
-    loadStaff();
-    loadVisitors();
-    loadVehicles();
-  }, []);
-
-
-
-  const loadLoginProfile = async () => {
-    try {
-      const response = await axiosInstance.get("/admin/profile");
-      const profileData = response.data.data;
-      setAdminProfile(profileData);
-      setProfileFormData({
-        username: profileData.username || "",
-        email: profileData.email || "",
-        phone: profileData.contactNumber || ""
-      });
-
-      // Only SUPER ADMIN needs the full list of apartments
-      if (profileData.role === "ROLE_SUPER_ADMIN") {
-        loadApartments();
-      }
-    } catch (error) {
-      console.error("Error loading profile:", error);
-    } finally {
-      setLoading(false);
     }
   };
-
 
   const handleProfilePictureUpload = async (e) => {
     const file = e.target.files[0];
@@ -268,7 +306,7 @@ export default function AdminDashboard() {
       });
 
       addToast("success", "Success", "Profile picture updated!");
-      loadLoginProfile();
+      queryClient.invalidateQueries(["adminProfile"]);
     } catch (err) {
       addToast("error", "Error", "Failed to upload profile picture");
     } finally {
@@ -276,181 +314,56 @@ export default function AdminDashboard() {
     }
   };
 
-  const loadFlats = async () => {
-    try {
-      const response = await axiosInstance.get("/flats");
-      let data = response.data;
-      if (data && data.data) data = data.data;
-      if (data && data.content) data = data.content;
-      setFlats(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error("Error loading flats:", error);
-      setFlats([]);
-    }
-  };
+  // Close modal when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showNoticeModal && noticeModalRef.current && !noticeModalRef.current.contains(event.target)) {
+        setShowNoticeModal(false);
+        setNoticeErrors({});
+      }
+      if (showStaffModal && staffModalRef.current && !staffModalRef.current.contains(event.target)) {
+        setShowStaffModal(false);
+        setStaffErrors({});
+      }
+    };
 
-  const loadBlocks = async () => {
-    try {
-      const response = await axiosInstance.get("/blocks");
-      let data = response.data;
-      if (data && data.data) data = data.data;
-      if (data && data.content) data = data.content;
-      setBlocks(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error("Error loading blocks:", error);
-      setBlocks([]);
-    }
-  };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showNoticeModal, showStaffModal]);
 
-  const loadApartments = async () => {
-    try {
-      const response = await axiosInstance.get("/apartments");
-      let data = response.data;
-      if (data && data.data) data = data.data;
-      if (data && data.content) data = data.content;
-      setApartments(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error("Error loading apartments:", error);
-      setApartments([]);
-    }
-  };
+  // Modal refs for click outside detection
+  const noticeModalRef = useRef(null);
+  const staffModalRef = useRef(null);
 
-  const loadNotices = async () => {
-    try {
-      const response = await axiosInstance.get("/admin/notices");
-      const noticesData = response.data.data || response.data || [];
-      setNotices(Array.isArray(noticesData) ? noticesData : []);
-    } catch (error) {
-      console.error("Error loading notices:", error);
-      setNotices([]);
-    }
-  };
-
-  const loadStaff = async () => {
-    try {
-      const response = await axiosInstance.get("/admin/staff");
-      const staffData = response.data.data || response.data || [];
-      setStaff(Array.isArray(staffData) ? staffData : []);
-
-      const deactivatedResponse = await axiosInstance.get("/admin/staff/deactivated");
-      const deactivatedData = deactivatedResponse.data.data || deactivatedResponse.data || [];
-      setDeactivatedStaff(Array.isArray(deactivatedData) ? deactivatedData : []);
-    } catch (error) {
-      console.error("Error loading staff:", error);
-      setStaff([]);
-      setDeactivatedStaff([]);
-    }
-  };
-
-  const loadVisitors = async () => {
-    try {
-      const response = await axiosInstance.get("/admin/visitors");
-      const data = response.data.data || [];
-      setVisitors(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error("Error loading visitors:", error);
-    }
-  };
-
-  const loadVehicles = async () => {
-    try {
-      const response = await axiosInstance.get("/admin/vehicles");
-      const data = response.data.data || [];
-      setVehicles(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error("Error loading vehicles:", error);
-    }
-  };
-
-  const handleProfileUpdate = async () => {
-    try {
-      await axiosInstance.put("/admin/update-profile", {
-        username: profileFormData.username,
-        email: profileFormData.email,
-        contactNumber: profileFormData.phone
-      });
-
-      setAdminProfile({
-        ...adminProfile,
-        username: profileFormData.username,
-        email: profileFormData.email,
-        contactNumber: profileFormData.phone
-      });
-
+  // Mutations
+  const profileMutation = useMutation({
+    mutationFn: (payload) => axiosInstance.put("/admin/update-profile", payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["adminProfile"]);
       setIsEditingProfile(false);
       addToast("success", "Success", "Profile updated successfully!");
-    } catch (error) {
-      addToast(
-        "error",
-        "Error",
-        error.response?.data?.message || "Failed to update profile"
-      );
+    },
+    onError: (error) => {
+      addToast("error", "Error", error.response?.data?.message || "Failed to update profile");
     }
-  };
+  });
 
-  const handlePasswordChange = async () => {
-    if (!passwordFormData.currentPassword || !passwordFormData.newPassword || !passwordFormData.confirmPassword) {
-      addToast("error", "Error", "Please fill all password fields");
-      return;
-    }
-    if (passwordFormData.newPassword !== passwordFormData.confirmPassword) {
-      addToast("error", "Error", "New passwords do not match");
-      return;
-    }
-    try {
-      await axiosInstance.put("/admin/change-password", passwordFormData);
+  const passwordMutation = useMutation({
+    mutationFn: (payload) => axiosInstance.put("/admin/change-password", payload),
+    onSuccess: () => {
       addToast("success", "Success", "Password changed successfully!");
       setIsChangingPassword(false);
       setPasswordFormData({ currentPassword: "", newPassword: "", confirmPassword: "" });
-    } catch (error) {
+    },
+    onError: (error) => {
       addToast("error", "Error", error.response?.data?.message || "Failed to change password");
     }
-  };
+  });
 
-  const handleNoticeSubmit = async () => {
-    if (!validateNoticeForm()) {
-      return;
-    }
-
-    setNoticeLoading(true);
-    try {
-      let attachmentUrl = "";
-
-      if (noticeFile) {
-        setUploadingNoticeFile(true);
-        const fileData = new FormData();
-        fileData.append("file", noticeFile);
-
-        try {
-          const uploadRes = await axiosInstance.post("/files/upload", fileData, {
-            headers: { "Content-Type": "multipart/form-data" }
-          });
-          attachmentUrl = uploadRes.data;
-        } catch (uploadErr) {
-          console.error("File upload failed", uploadErr);
-          addToast("error", "Error", "File upload failed. Notice will be published without it.");
-        } finally {
-          setUploadingNoticeFile(false);
-        }
-      }
-
-      // Clean up payload
-      const payload = { ...noticeFormData };
-
-      if (attachmentUrl) {
-        payload.attachmentUrl = attachmentUrl;
-      }
-
-      if (!payload.eventDate || payload.eventDate.trim() === "") delete payload.eventDate;
-      if (!payload.eventLocation || payload.eventLocation.trim() === "") delete payload.eventLocation;
-
-      if (payload.type !== 'EVENT') {
-        delete payload.eventDate;
-        delete payload.eventLocation;
-        delete payload.rsvpEnabled;
-      }
-
-      await axiosInstance.post("/admin/notices", payload);
+  const noticeMutation = useMutation({
+    mutationFn: (payload) => axiosInstance.post("/admin/notices", payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["notices"]);
       addToast("success", "Success", "Notice published successfully!");
       setShowNoticeModal(false);
       setNoticeFormData({
@@ -464,98 +377,115 @@ export default function AdminDashboard() {
         rsvpEnabled: false
       });
       setNoticeFile(null);
-      setNoticeErrors({});
-      loadNotices();
-    } catch (error) {
+    },
+    onError: (error) => {
       addToast("error", "Error", error.response?.data?.message || "Failed to publish notice");
-    } finally {
-      setNoticeLoading(false);
     }
-  };
+  });
 
-  const handleNoticeDelete = async (id) => {
-    try {
-      await axiosInstance.delete(`/admin/notices/${id}`);
+  const deleteNoticeMutation = useMutation({
+    mutationFn: (id) => axiosInstance.delete(`/admin/notices/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["notices"]);
       addToast("success", "Success", "Notice deleted successfully!");
-      loadNotices();
-    } catch (error) {
-      addToast("error", "Error", "Failed to delete notice");
-    }
-  };
+    },
+    onError: () => addToast("error", "Error", "Failed to delete notice")
+  });
 
-  const loadNoticeResponses = async (noticeId) => {
-    if (expandedNoticeId === noticeId) {
-      setExpandedNoticeId(null);
-      return;
-    }
-
-    setExpandedNoticeId(noticeId);
-    if (!noticeResponses[noticeId]) {
-      setLoadingResponses(true);
-      try {
-        const res = await axiosInstance.get(`/admin/notices/${noticeId}/responses`);
-        const data = res.data.data || res.data || [];
-        setNoticeResponses(prev => ({ ...prev, [noticeId]: Array.isArray(data) ? data : [] }));
-      } catch (err) {
-        console.error("Failed to fetch notice responses", err);
-      } finally {
-        setLoadingResponses(false);
-      }
-    }
-  };
-
-  const handleStaffSubmit = async () => {
-    if (!validateStaffForm()) {
-      return;
-    }
-
-    setStaffLoading(true);
-    try {
-      const payload = {
-        username: staffFormData.username,
-        email: staffFormData.email,
-        contactNumber: staffFormData.phone,
-        designation: staffFormData.designation,
-        role: staffFormData.role,
-        password: staffFormData.password
-      };
-
+  const staffMutation = useMutation({
+    mutationFn: (payload) => {
       if (isEditingStaff) {
-        await axiosInstance.put(`/admin/staff/${editStaffId}`, payload);
-        addToast("success", "Success", "Staff member updated successfully!");
-      } else {
-        await axiosInstance.post("/admin/staff", payload);
-        addToast("success", "Success", "Staff member added successfully!");
+        return axiosInstance.put(`/admin/staff/${editStaffId}`, payload);
       }
-
+      return axiosInstance.post("/admin/staff", payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["staff"]);
+      addToast("success", "Success", "Staff record updated!");
       closeStaffModal();
-      loadStaff();
-    } catch (error) {
-      addToast("error", "Error", error.response?.data?.message || "Operation failed");
-    } finally {
-      setStaffLoading(false);
-    }
+    },
+    onError: (error) => addToast("error", "Error", error.response?.data?.message || "Operation failed")
+  });
+
+  const staffStatusMutation = useMutation({
+    mutationFn: ({ id, action }) => axiosInstance.put(`/admin/staff/${id}/${action}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["staff"]);
+      addToast("success", "Success", "Staff status updated!");
+    },
+    onError: () => addToast("error", "Error", "Failed to update staff status")
+  });
+
+  // Toast helper functions
+  const addToast = (type, title, message) => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, type, title, message }]);
   };
 
-  const handleStaffDeactivate = async (id) => {
-    try {
-      await axiosInstance.put(`/admin/staff/${id}/deactivate`);
-      addToast("success", "Success", "Staff member deactivated successfully!");
-      loadStaff();
-    } catch (error) {
-      addToast("error", "Error", "Failed to deactivate staff member");
-    }
+  const removeToast = (id) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
   };
 
-  const handleStaffReactivate = async (id) => {
-    try {
-      await axiosInstance.put(`/admin/staff/${id}/reactivate`);
-      addToast("success", "Success", "Staff member reactivated successfully!");
-      loadStaff();
-    } catch (error) {
-      addToast("error", "Error", "Failed to reactivate staff member");
-    }
+  const handleProfileUpdate = () => {
+    profileMutation.mutate({
+      username: profileFormData.username,
+      email: profileFormData.email,
+      contactNumber: profileFormData.phone
+    });
   };
+
+  const handlePasswordChange = () => {
+    if (!passwordFormData.currentPassword || !passwordFormData.newPassword || !passwordFormData.confirmPassword) {
+      addToast("error", "Error", "Please fill all password fields");
+      return;
+    }
+    if (passwordFormData.newPassword !== passwordFormData.confirmPassword) {
+      addToast("error", "Error", "New passwords do not match");
+      return;
+    }
+    passwordMutation.mutate(passwordFormData);
+  };
+
+  const handleNoticeSubmit = async () => {
+    if (!validateNoticeForm()) return;
+
+    let attachmentUrl = "";
+    if (noticeFile) {
+      setUploadingNoticeFile(true);
+      const fileData = new FormData();
+      fileData.append("file", noticeFile);
+      try {
+        const uploadRes = await axiosInstance.post("/files/upload", fileData, {
+          headers: { "Content-Type": "multipart/form-data" }
+        });
+        attachmentUrl = uploadRes.data;
+      } catch (uploadErr) {
+        addToast("error", "Error", "File upload failed.");
+      } finally {
+        setUploadingNoticeFile(false);
+      }
+    }
+
+    const payload = { ...noticeFormData, attachmentUrl };
+    noticeMutation.mutate(payload);
+  };
+
+  const handleNoticeDelete = (id) => deleteNoticeMutation.mutate(id);
+
+  const handleStaffSubmit = () => {
+    if (!validateStaffForm()) return;
+    staffMutation.mutate({
+      username: staffFormData.username,
+      email: staffFormData.email,
+      contactNumber: staffFormData.phone,
+      designation: staffFormData.designation,
+      role: staffFormData.role,
+      password: staffFormData.password
+    });
+  };
+
+  const handleStaffDeactivate = (id) => staffStatusMutation.mutate({ id, action: "deactivate" });
+  const handleStaffReactivate = (id) => staffStatusMutation.mutate({ id, action: "reactivate" });
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -608,7 +538,7 @@ export default function AdminDashboard() {
     { id: "manageFeedback", label: "Feedback & Support", icon: <FileTextIcon /> },
   ];
 
-  if (loading) {
+  if (isProfilePending) {
     return (
       <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-50">
         <div className="loading-spinner"></div>
@@ -1061,28 +991,34 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Occupancy Pie Chart */}
-                {flats.length > 0 && (
-                  <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center' }}>
-                    <PieChart width={300} height={300}>
-                      <Pie
-                        data={[
-                          { name: 'Occupied', value: flats.length - flats.filter(f => f.status === 'AVAILABLE').length },
-                          { name: 'Available', value: flats.filter(f => f.status === 'AVAILABLE').length }
-                        ]}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        paddingAngle={5}
-                        dataKey="value"
-                      >
-                        <Cell key="cell-0" fill="#4ade80" /> {/* Occupied - Green */}
-                        <Cell key="cell-1" fill="#f87171" /> {/* Available - Red */}
-                      </Pie>
-                      <Tooltip />
-                      <Legend />
-                    </PieChart>
+                {flats.length > 0 ? (
+                  <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center', height: '300px', width: '100%' }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={[
+                            { name: 'Occupied', value: flats.length - flats.filter(f => f.status === 'AVAILABLE').length },
+                            { name: 'Available', value: flats.filter(f => f.status === 'AVAILABLE').length }
+                          ]}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          paddingAngle={5}
+                          dataKey="value"
+                        >
+                          <Cell key="cell-0" fill="#4ade80" /> {/* Occupied - Green */}
+                          <Cell key="cell-1" fill="#f87171" /> {/* Available - Red */}
+                        </Pie>
+                        <Tooltip />
+                        <Legend verticalAlign="bottom" height={36}/>
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div style={{ height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+                    <p>No unit data available</p>
                   </div>
                 )}
               </div>
@@ -1239,11 +1175,11 @@ export default function AdminDashboard() {
                     {uploadingNoticeFile && <p style={{ fontSize: '12px', color: '#f39c12' }}>Uploading file...</p>}
                   </div>
                   <div className="inline-form-actions">
-                    <button className="inline-btn inline-btn-cancel" onClick={closeNoticeModal} disabled={noticeLoading}>
+                    <button className="inline-btn inline-btn-cancel" onClick={closeNoticeModal} disabled={noticeMutation.isPending}>
                       Cancel
                     </button>
-                    <button className={`inline-btn inline-btn-submit btn-gradient-orange ${noticeLoading ? 'btn-loading' : ''}`} onClick={handleNoticeSubmit} disabled={noticeLoading}>
-                      {noticeLoading ? 'Publishing...' : '📢 Publish Notice'}
+                    <button className={`inline-btn inline-btn-submit btn-gradient-orange ${noticeMutation.isPending ? 'btn-loading' : ''}`} onClick={handleNoticeSubmit} disabled={noticeMutation.isPending}>
+                      {noticeMutation.isPending ? 'Publishing...' : '📢 Publish Notice'}
                     </button>
                   </div>
                 </div>
@@ -1454,11 +1390,11 @@ export default function AdminDashboard() {
                   </div>
 
                   <div className="inline-form-actions">
-                    <button className="inline-btn inline-btn-cancel" onClick={closeStaffModal} disabled={staffLoading}>
+                    <button className="inline-btn inline-btn-cancel" onClick={closeStaffModal} disabled={staffMutation.isPending}>
                       Cancel
                     </button>
-                    <button className={`inline-btn inline-btn-submit btn-gradient-blue ${staffLoading ? 'btn-loading' : ''}`} onClick={handleStaffSubmit} disabled={staffLoading}>
-                      {staffLoading ? (isEditingStaff ? 'Updating...' : 'Adding...') : (isEditingStaff ? '✏️ Update Staff' : '➕ Add Staff Member')}
+                    <button className={`inline-btn inline-btn-submit btn-gradient-blue ${staffMutation.isPending ? 'btn-loading' : ''}`} onClick={handleStaffSubmit} disabled={staffMutation.isPending}>
+                      {staffMutation.isPending ? (isEditingStaff ? 'Updating...' : 'Adding...') : (isEditingStaff ? '✏️ Update Staff' : '➕ Add Staff Member')}
                     </button>
                   </div>
                 </div>
@@ -1585,9 +1521,9 @@ export default function AdminDashboard() {
             apartments={apartments}
             blocks={blocks}
             flats={flats}
-            loadApartments={loadApartments}
-            loadBlocks={loadBlocks}
-            loadFlats={loadFlats}
+            loadApartments={() => queryClient.invalidateQueries(["apartments"])}
+            loadBlocks={() => queryClient.invalidateQueries(["blocks"])}
+            loadFlats={() => queryClient.invalidateQueries(["flats"])}
           />
         )}
         {activeView === "manageComplaints" && <ManageComplaints />}
