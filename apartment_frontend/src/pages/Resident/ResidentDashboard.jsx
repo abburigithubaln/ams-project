@@ -47,7 +47,7 @@ const HelpCircleIconSVG = () => <I d={<><circle cx="12" cy="12" r="10" /><path d
 const MessageSquareIconSVG = () => <I d={<><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></>} />;
 
 export default function ResidentDashboard() {
-  const [activeView, setActiveView] = useState("overview");
+  const [activeView, setActiveView] = useState("dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [user, setUser] = useState(null);
   const [flat, setFlat] = useState(null);
@@ -630,13 +630,77 @@ export default function ResidentDashboard() {
     }
   };
 
+  const handleRazorpayPayment = async (record) => {
+    try {
+      const amount = Math.round(record.totalAmount || record.amount);
+      const res = await axiosInstance.post(`/payment/create-order?amount=${amount}`);
+      
+      // Since the backend returns order.toString(), we might need to parse it if it's a string
+      const order = typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
+
+      const options = {
+        key: "rzp_test_SdLKFPSt86RhE2",
+        amount: order.amount,
+        currency: "INR",
+        name: "Secure Gate AMS",
+        description: `Maintenance for ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][record.month-1]} ${record.year}`,
+        image: "https://cdn-icons-png.flaticon.com/512/1011/1011322.png",
+        order_id: order.id,
+        handler: async function (response) {
+          try {
+            // Step 1: Verify payment signature on backend
+            const verifyRes = await axiosInstance.post("/payment/verify", {
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpayOrderId:   response.razorpay_order_id,
+              razorpaySignature: response.razorpay_signature,
+              amount: String(amount)
+            });
+
+            if (verifyRes.data.success) {
+              showToast("Payment Successful & Verified! 🎉");
+              
+              // Step 2: Mark maintenance record as paid in DB
+              try {
+                await axiosInstance.put(
+                  `/user/maintenance/${record.id}/mark-paid?paymentMethod=ONLINE&reference=${response.razorpay_payment_id}`
+                );
+                fetchMaintenance();
+              } catch (err) {
+                console.error("Failed to update maintenance status:", err);
+              }
+            } else {
+              showToast("Payment verification failed. Contact support.", "error");
+            }
+          } catch (err) {
+            console.error("Verification call failed:", err);
+            showToast("Payment done but verification failed. Contact support.", "error");
+          }
+        },
+        prefill: {
+          name: user?.username || "",
+          email: user?.email || "",
+          contact: user?.contactNumber || ""
+        },
+        theme: {
+          color: "#00897B"
+        }
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    } catch (error) {
+      console.error("Razorpay error:", error);
+      showToast("Failed to initiate online payment", "error");
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("token");
     navigate("/");
   };
 
   const sidebarItems = [
-    { id: "overview", label: "Overview", icon: <GridIconSVG /> },
+    { id: "dashboard", label: "Dashboard", icon: <GridIconSVG /> },
     { id: "myFlat", label: "My Flat", icon: <HomeIconSVG /> },
     { id: "notices", label: "Notices & Events", icon: <BellIconSVG /> },
     { id: "polls", label: "Polls", icon: <VoteIconSVG /> },
@@ -1027,8 +1091,8 @@ export default function ResidentDashboard() {
           </div>
         )}
 
-        {/* OVERVIEW SECTION */}
-        {activeView === "overview" && (
+        {/* DASHBOARD SECTION */}
+        {activeView === "dashboard" && (
           <div className="fade-in-up">
             <div className="page-header">
             </div>
@@ -1572,13 +1636,22 @@ export default function ResidentDashboard() {
                         {/* Actions */}
                         <div style={{ display: 'flex', gap: '10px', flexShrink: 0, flexWrap: 'wrap' }}>
                           {!isPaid && (
-                            <button
-                              className="btn btn-primary btn-sm"
-                              style={{ borderRadius: '8px', padding: '8px 18px', fontWeight: 600 }}
-                              onClick={() => { setSelectedMaintenance(record); setPaymentStep(1); setPaymentMethod('UPI'); setPaymentRef(''); setShowPaymentModal(true); }}
-                            >
-                              💳 Pay Now
-                            </button>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <button
+                                className="btn btn-primary btn-sm"
+                                style={{ borderRadius: '8px', padding: '8px 18px', fontWeight: 600, background: '#00897B', borderColor: '#00897B' }}
+                                onClick={() => handleRazorpayPayment(record)}
+                              >
+                                💳 Pay Online
+                              </button>
+                              <button
+                                className="btn btn-outline-primary btn-sm"
+                                style={{ borderRadius: '8px', padding: '8px 18px', fontWeight: 600 }}
+                                onClick={() => { setSelectedMaintenance(record); setPaymentStep(1); setPaymentMethod('UPI'); setPaymentRef(''); setShowPaymentModal(true); }}
+                              >
+                                🔔 Manual Confirm
+                              </button>
+                            </div>
                           )}
                           {isPaid && (
                             <button
@@ -1670,7 +1743,7 @@ export default function ResidentDashboard() {
             <div className="page-header page-header-container">
               <div>
               </div>
-              <button className="btn btn-primary" onClick={() => setShowServiceRequestModal(!showServiceRequestModal)}>
+              <button className="btn" style={{ background: '#00897B', color: 'white' }} onClick={() => setShowServiceRequestModal(!showServiceRequestModal)}>
                 {showServiceRequestModal ? '✕ Close Form' : '+ Request Service'}
               </button>
             </div>
@@ -1738,7 +1811,7 @@ export default function ResidentDashboard() {
                     </div>
                     <div className="inline-form-actions">
                       <button type="button" className="inline-btn inline-btn-cancel" onClick={() => setShowServiceRequestModal(false)}>Cancel</button>
-                      <button type="submit" className="inline-btn inline-btn-submit" disabled={raisingServiceRequest}>
+                      <button type="submit" className="inline-btn" style={{ background: '#00897B', color: 'white' }} disabled={raisingServiceRequest}>
                         {raisingServiceRequest ? 'Raising...' : 'Raise Request'}
                       </button>
                     </div>

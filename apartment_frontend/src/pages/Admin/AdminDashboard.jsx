@@ -89,7 +89,7 @@ const ToastContainer = ({ toasts, removeToast }) => {
 
 export default function AdminDashboard() {
   const queryClient = useQueryClient();
-  const [activeView, setActiveView] = useState("overview");
+  const [activeView, setActiveView] = useState("dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   
   // Queries
@@ -522,7 +522,7 @@ export default function AdminDashboard() {
   };
 
   const sidebarItems = [
-    { id: "overview", label: "Overview", icon: <GridIcon /> },
+    { id: "dashboard", label: "Dashboard", icon: <GridIcon /> },
     { id: "notices", label: "Notices", icon: <BellIcon /> },
     { id: "staff", label: "Staff Management", icon: <UsersIcon /> },
     { id: "manageUsers", label: "Manage Users", icon: <UserIcon /> },
@@ -861,8 +861,8 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* OVERVIEW SECTION */}
-        {activeView === "overview" && (
+        {/* DASHBOARD SECTION */}
+        {activeView === "dashboard" && (
           <div className="fade-in-up">
             <div className="page-header">
             </div>
